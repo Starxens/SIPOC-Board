@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIPOC Board (Import/Export)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* --- Stylish & Professional Custom Styles --- */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f9; /* Lighter gray/blue background */
+            color: #334155; /* slate-700 for base text */
+        }
+
+        /* Main container for each process row */
+        .process-group {
+            background-color: #ffffff; /* white */
+            border: 1px solid #e2e8f0; /* slate-200 */
+            border-radius: 0.5rem; /* rounded-lg (slightly less round) */
+            margin-bottom: 2rem; /* mb-8 */
+            padding: 1.5rem; /* p-6 */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0,0,0,0.03); /* Softer shadow */
+            position: relative;
+            transition: box-shadow 0.2s ease-in-out;
+        }
+        .process-group:hover {
+             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.07), 0 3px 6px rgba(0,0,0,0.05); /* Slightly larger shadow on hover */
+        }
+
+
+        /* Grid for the horizontal S-I-P-O-C layout */
+        .sipoc-row-grid {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr); /* Stack on small */
+            gap: 1rem; /* Reduced gap */
+        }
+        @media (min-width: 1024px) { /* 5 columns on large screens */
+             .sipoc-row-grid {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 1.25rem; /* gap-5 */
+            }
+        }
+
+        /* Styling for each S/I/P/O/C column */
+        .sipoc-item-column {
+            border: 1px solid #e2e8f0; /* slate-200 */
+            border-radius: 0.375rem; /* rounded-md */
+            padding: 1rem; /* p-4 */
+            min-height: 220px; /* Increased min-height */
+            background-color: #f8fafc; /* slate-50 (slightly cooler gray) */
+            display: flex;
+            flex-direction: column;
+            transition: border-color 0.2s ease;
+        }
+         /* Subtle hover border */
+        .sipoc-item-column:hover {
+             border-color: #cbd5e1; /* slate-300 */
+        }
+
+        /* Specific styling for the Process column */
+        .process-column {
+            border: 1px solid #f43f5e; /* rose-500 border */
+            background-color: #fff1f2; /* rose-50 */
+        }
+         .process-column:hover {
+             border-color: #e11d48; /* rose-600 */
+         }
+
+         /* Process textarea styling */
+         .process-column textarea {
+            font-weight: 500; /* medium weight */
+            font-size: 1rem; /* text-base */
+            color: #500724; /* rose-950 */
+            width: 100%;
+            padding: 0.75rem; /* p-3 */
+            border: 1px solid #fecdd3; /* rose-200 */
+            border-radius: 0.375rem; /* rounded-md */
+            background-color: #ffffff; /* White background for contrast */
+            outline: none;
+            resize: none;
+            flex-grow: 1;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+         .process-column textarea:focus {
+             border-color: #f43f5e; /* rose-500 */
+             box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.2); /* rose-500 ring */
+         }
+
+        /* Column Headers */
+        .sipoc-item-column h3 {
+            margin-bottom: 1rem; /* mb-4 */
+            font-weight: 600; /* semibold */
+            font-size: 0.875rem; /* text-sm */
+            text-align: center;
+            text-transform: uppercase; /* Uppercase headers */
+            letter-spacing: 0.05em; /* Add letter spacing */
+            flex-shrink: 0;
+        }
+        /* Refined Header Colors (using slightly less saturated tones) */
+        .header-suppliers { color: #2563eb; } /* blue-600 */
+        .header-inputs { color: #059669; } /* emerald-600 */
+        .header-process { color: #e11d48; } /* rose-600 */
+        .header-outputs { color: #7e22ce; } /* purple-700 */
+        .header-customers { color: #ea580c; } /* orange-600 */
+
+        /* List container for sub-notes */
+        .sub-note-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem; /* gap-2 */
+            flex-grow: 1;
+            margin-bottom: 1rem; /* mb-4 */
+        }
+
+        /* Individual sub-note styling */
+        .sub-note {
+            background-color: #ffffff; /* white */
+            border: 1px solid #e2e8f0; /* slate-200 */
+            border-radius: 0.375rem; /* rounded-md */
+            padding: 0.625rem 0.75rem; /* py-2.5 px-3 */
+            position: relative;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.03); /* Subtle shadow */
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+        }
+         .sub-note:hover {
+             background-color: #f8fafc; /* slate-50 on hover */
+             border-color: #cbd5e1; /* slate-300 */
+         }
+
+        /* Sub-note textarea */
+        .sub-note textarea {
+            width: calc(100% - 22px); /* Adjusted for button */
+            border: none;
+            outline: none;
+            resize: none;
+            font-size: 0.875rem; /* text-sm */
+            line-height: 1.25rem;
+            background: transparent;
+            padding: 0;
+            vertical-align: top;
+            min-height: 20px;
+            color: #475569; /* slate-600 */
+            overflow-y: hidden;
+        }
+         .sub-note textarea:focus {
+             color: #1e293b; /* slate-800 */
+         }
+
+        /* Delete button for sub-notes */
+        .delete-sub-note-btn {
+            position: absolute;
+            top: 5px; /* Adjusted position */
+            right: 5px;
+            background: transparent;
+            border: none;
+            color: #94a3b8; /* slate-400 */
+            cursor: pointer;
+            font-size: 1rem; /* Larger 'x' */
+            padding: 0;
+            line-height: 1;
+            display: none; /* Hidden by default */
+            transition: color 0.2s ease;
+        }
+        .sub-note:hover .delete-sub-note-btn {
+            display: inline-block;
+        }
+        .delete-sub-note-btn:hover {
+            color: #ef4444; /* red-500 */
+        }
+
+        /* "Add" button for sub-notes */
+        .add-sub-note-btn {
+            display: block;
+            width: 100%;
+            flex-shrink: 0;
+            padding: 0.5rem 0.75rem; /* py-2 px-3 */
+            font-size: 0.8125rem; /* Slightly smaller text */
+            font-weight: 500; /* medium */
+            border-radius: 0.375rem; /* rounded-md */
+            border: 1px solid; /* Defined below */
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, color 0.15s ease-in-out;
+        }
+        /* Updated Add Button Colors (more subtle) */
+        .add-supplier-btn { background-color: #eff6ff; color: #3b82f6; border-color: #bfdbfe; } /* blue */
+        .add-supplier-btn:hover { background-color: #dbeafe; border-color: #93c5fd; }
+        .add-input-btn { background-color: #ecfdf5; color: #10b981; border-color: #a7f3d0; } /* emerald */
+        .add-input-btn:hover { background-color: #d1fae5; border-color: #6ee7b7; }
+        .add-output-btn { background-color: #f5f3ff; color: #8b5cf6; border-color: #ddd6fe; } /* violet */
+        .add-output-btn:hover { background-color: #ede9fe; border-color: #c4b5fd; }
+        .add-customer-btn { background-color: #fff7ed; color: #f97316; border-color: #fed7aa; } /* orange */
+        .add-customer-btn:hover { background-color: #ffedd5; border-color: #fdba74; }
+
+        /* Delete button for the entire process group */
+        .delete-group-btn {
+            position: absolute;
+            top: 12px; /* Adjusted */
+            right: 12px;
+            background-color: #f1f5f9; /* slate-100 */
+            color: #64748b; /* slate-500 */
+            border: 1px solid #e2e8f0; /* slate-200 */
+            border-radius: 50%;
+            width: 26px; /* Slightly smaller */
+            height: 26px;
+            font-size: 1rem; /* Use consistent size */
+            line-height: 24px; /* Adjust line height */
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+        .delete-group-btn:hover {
+            background-color: #fecaca; /* red-200 */
+            color: #dc2626; /* red-600 */
+            border-color: #fca5a5; /* red-300 */
+        }
+
+        /* Main Action Buttons Styling */
+        .action-button {
+             color: white;
+             font-weight: 600; /* semibold */
+             padding: 0.625rem 1.5rem; /* py-2.5 px-6 */
+             border-radius: 0.375rem; /* rounded-md */
+             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+             transition: background-color 0.2s ease, box-shadow 0.2s ease;
+             margin: 0 0.5rem; /* Add space between buttons */
+        }
+         .action-button:hover {
+             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+         }
+        /* Add Process Button */
+        #add-process-group-btn {
+             background-color: #4f46e5; /* indigo-600 */
+        }
+         #add-process-group-btn:hover {
+             background-color: #4338ca; /* indigo-700 */
+         }
+         /* Save CSV Button */
+         #save-csv-btn {
+              background-color: #059669; /* emerald-600 */
+         }
+          #save-csv-btn:hover {
+              background-color: #047857; /* emerald-700 */
+          }
+          /* Import CSV Button */
+         #import-csv-btn {
+              background-color: #d97706; /* amber-600 */
+         }
+          #import-csv-btn:hover {
+              background-color: #b45309; /* amber-700 */
+          }
+
+        /* Hide the actual file input */
+        #csv-file-input {
+            display: none;
+        }
+
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="p-5 md:p-8">
+
+    <div class="max-w-full mx-auto px-4">
+        <h1 class="text-3xl md:text-4xl font-bold text-center mb-8 md:mb-12 text-slate-800">SIPOC Board</h1>
+        <div class="text-center mb-10">
+            <button id="add-process-group-btn" class="action-button">
+                Add New Process Group
+            </button>
+            <button id="save-csv-btn" class="action-button">
+                Save Status (CSV)
+            </button>
+            <button id="import-csv-btn" class="action-button">
+                Import Status (CSV)
+            </button>
+            <input type="file" id="csv-file-input" accept=".csv">
+        </div>
+
+        <div id="process-groups-container">
+            </div>
+    </div>
+
+    <template id="process-group-template">
+        <div class="process-group">
+            <button class="delete-group-btn" title="Delete Process Group">&times;</button>
+            <div class="sipoc-row-grid">
+                <div class="sipoc-item-column">
+                    <h3 class="header-suppliers">Suppliers</h3>
+                    <div class="sub-note-list suppliers-list"></div>
+                    <button class="add-sub-note-btn add-supplier-btn" data-type="suppliers">Add Supplier +</button>
+                </div>
+                <div class="sipoc-item-column">
+                    <h3 class="header-inputs">Inputs</h3>
+                    <div class="sub-note-list inputs-list"></div>
+                    <button class="add-sub-note-btn add-input-btn" data-type="inputs">Add Input +</button>
+                </div>
+                <div class="sipoc-item-column process-column">
+                    <h3 class="header-process">Process</h3>
+                    <textarea class="note-content process-content" rows="3" placeholder="Describe the process step..."></textarea>
+                </div>
+                <div class="sipoc-item-column">
+                    <h3 class="header-outputs">Outputs</h3>
+                    <div class="sub-note-list outputs-list"></div>
+                    <button class="add-sub-note-btn add-output-btn" data-type="outputs">Add Output +</button>
+                </div>
+                <div class="sipoc-item-column">
+                    <h3 class="header-customers">Customers</h3>
+                    <div class="sub-note-list customers-list"></div>
+                    <button class="add-sub-note-btn add-customer-btn" data-type="customers">Add Customer +</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        // --- Configuration ---
+        const LOCAL_STORAGE_KEY = 'processCentricSipocBoard_v2_stylish'; // Key for this version
+
+        // --- DOM Elements ---
+        const addProcessGroupButton = document.getElementById('add-process-group-btn');
+        const saveCsvButton = document.getElementById('save-csv-btn');
+        const importCsvButton = document.getElementById('import-csv-btn'); // New
+        const csvFileInput = document.getElementById('csv-file-input'); // New
+        const processGroupsContainer = document.getElementById('process-groups-container');
+        const processGroupTemplate = document.getElementById('process-group-template');
+
+        // --- State ---
+        let processGroups = []; // Array of process group objects
+
+        // --- Functions ---
+
+        /**
+         * Generates a unique ID. Prefixed for clarity.
+         * @param {string} prefix - e.g., 'process', 'note'
+         */
+        function generateId(prefix) {
+            return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`;
+        }
+
+        /**
+         * Adjusts textarea height based on content.
+         * @param {HTMLTextAreaElement} textarea
+         */
+        function autoResizeTextarea(textarea) {
+            if (!textarea) return;
+            textarea.style.height = 'auto';
+            const minHeight = parseInt(window.getComputedStyle(textarea).minHeight, 10) || 20;
+            textarea.style.height = Math.max(minHeight, textarea.scrollHeight + 2) + 'px';
+        }
+
+
+        /**
+         * Saves the current state of process groups to localStorage.
+         */
+        function saveState() {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(processGroups));
+             // console.log("State saved.");
+        }
+
+        /**
+         * Finds a process group by its ID.
+         * @param {string} processId
+         * @returns {object | undefined}
+         */
+        function findProcessGroup(processId) {
+             return processGroups.find(group => group.id === processId);
+        }
+
+        /**
+         * Updates the content of the main process note.
+         * @param {string} processId
+         * @param {string} content
+         */
+        function updateProcessContent(processId, content) {
+            const group = findProcessGroup(processId);
+            if (group) {
+                group.processContent = content;
+                saveState();
+            }
+        }
+
+        /**
+         * Updates the content of a sub-note (S, I, O, C).
+         * @param {string} processId
+         * @param {string} type
+         * @param {string} noteId
+         * @param {string} content
+         */
+        function updateSubNoteContent(processId, type, noteId, content) {
+            const group = findProcessGroup(processId);
+            if (group && Array.isArray(group[type])) {
+                const note = group[type].find(n => n.id === noteId);
+                if (note) {
+                    note.content = content;
+                    saveState();
+                }
+            }
+        }
+
+        /**
+         * Deletes a sub-note (S, I, O, C) from a process group.
+         * @param {string} processId
+         * @param {string} type
+         * @param {string} noteId
+         */
+        function deleteSubNote(processId, type, noteId) {
+            const group = findProcessGroup(processId);
+            if (group && Array.isArray(group[type])) {
+                group[type] = group[type].filter(n => n.id !== noteId);
+                const noteElement = document.getElementById(noteId);
+                if (noteElement) {
+                    noteElement.remove();
+                }
+                saveState();
+            }
+        }
+
+        /**
+         * Deletes an entire process group.
+         * Accepts the DOM element directly.
+         * @param {string} processId - ID for data filtering.
+         * @param {HTMLElement} groupElement - The DOM element to remove.
+         */
+        function deleteProcessGroup(processId, groupElement) {
+            // Update the data model first using the ID
+            const initialLength = processGroups.length;
+            processGroups = processGroups.filter(group => group.id !== processId);
+             if (processGroups.length === initialLength) {
+                 console.warn(`[deleteProcessGroup] Group with ID ${processId} already removed from data array.`);
+            }
+
+            // Remove the element directly using the passed reference
+            if (groupElement && groupElement.parentNode) {
+                 try {
+                    groupElement.remove();
+                 } catch (error) {
+                     console.error("[deleteProcessGroup] Error during element.remove():", error);
+                 }
+            } else {
+                 // Attempt fallback if direct reference failed
+                 console.warn(`[deleteProcessGroup] Element reference invalid or detached. Attempting fallback ID lookup for ${processId}`);
+                 const elementById = document.getElementById(processId);
+                 if (elementById) {
+                     try {
+                         elementById.remove();
+                         console.log("[deleteProcessGroup] Fallback removal successful.");
+                     } catch (error) {
+                         console.error("[deleteProcessGroup] Error during fallback element.remove():", error);
+                     }
+                 } else {
+                      console.error(`[deleteProcessGroup] Fallback failed: Element not found by ID ${processId} either.`);
+                 }
+            }
+            saveState();
+        }
+
+
+        /**
+         * Creates the DOM element for a single sub-note (S, I, O, C).
+         * @param {object} noteData - { id, content }
+         * @param {string} processId
+         * @param {string} type
+         * @returns {HTMLElement}
+         */
+        function createSubNoteElement(noteData, processId, type) {
+            const noteDiv = document.createElement('div');
+            noteDiv.id = noteData.id;
+            noteDiv.classList.add('sub-note');
+
+            const textarea = document.createElement('textarea');
+            textarea.value = noteData.content;
+            textarea.rows = 1;
+            textarea.placeholder = 'Add details...';
+            textarea.addEventListener('input', (e) => {
+                updateSubNoteContent(processId, type, noteData.id, e.target.value);
+                autoResizeTextarea(textarea);
+            });
+             textarea.addEventListener('focus', () => autoResizeTextarea(textarea));
+             textarea.addEventListener('blur', () => {});
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.classList.add('delete-sub-note-btn');
+            deleteBtn.innerHTML = '&times;';
+            deleteBtn.title = 'Delete item';
+            deleteBtn.onclick = () => {
+                deleteSubNote(processId, type, noteData.id);
+            };
+
+            noteDiv.appendChild(textarea);
+            noteDiv.appendChild(deleteBtn);
+
+             requestAnimationFrame(() => autoResizeTextarea(textarea));
+            return noteDiv;
+        }
+
+
+        /**
+         * Adds a new sub-note (S, I, O, C) to a specific process group.
+         * @param {string} processId
+         * @param {string} type
+         */
+        function addSubNote(processId, type) {
+            const group = findProcessGroup(processId);
+            if (!group) return;
+
+            const newNoteData = {
+                id: generateId('note'),
+                content: ''
+            };
+
+            if (!Array.isArray(group[type])) {
+                group[type] = [];
+            }
+            group[type].push(newNoteData);
+
+            const groupElement = document.getElementById(processId);
+            const listContainer = groupElement?.querySelector(`.${type}-list`);
+
+            if (listContainer) {
+                const noteElement = createSubNoteElement(newNoteData, processId, type);
+                listContainer.appendChild(noteElement);
+                const textarea = noteElement.querySelector('textarea');
+                 if(textarea) {
+                     requestAnimationFrame(() => textarea.focus());
+                 }
+            } else {
+                console.error(`Could not find list container for type ${type} in process ${processId}`);
+            }
+            saveState();
+        }
+
+
+        /**
+         * Creates and appends the DOM element for a process group.
+         * @param {object} groupData
+         */
+        function renderProcessGroup(groupData) {
+            const templateContent = processGroupTemplate.content.cloneNode(true);
+            const groupElement = templateContent.querySelector('.process-group');
+            groupElement.id = groupData.id;
+
+            const processTextarea = groupElement.querySelector('.process-content');
+            processTextarea.value = groupData.processContent || '';
+            processTextarea.addEventListener('input', (e) => {
+                 updateProcessContent(groupData.id, e.target.value);
+                 autoResizeTextarea(processTextarea);
+            });
+             requestAnimationFrame(() => autoResizeTextarea(processTextarea));
+
+            const deleteGroupBtn = groupElement.querySelector('.delete-group-btn');
+
+            if (deleteGroupBtn) {
+                deleteGroupBtn.addEventListener('click', () => {
+                    // No confirmation dialog - directly call delete
+                    deleteProcessGroup(groupData.id, groupElement);
+                });
+            } else {
+                 console.error("Delete button not found for group:", groupData.id);
+            }
+
+
+            ['suppliers', 'inputs', 'outputs', 'customers'].forEach(type => {
+                const listContainer = groupElement.querySelector(`.${type}-list`);
+                const addButton = groupElement.querySelector(`.add-sub-note-btn[data-type="${type}"]`);
+
+                if (!Array.isArray(groupData[type])) groupData[type] = [];
+
+                if (listContainer) {
+                     groupData[type].forEach(noteData => {
+                        if (noteData && noteData.id !== undefined && noteData.content !== undefined) {
+                           const noteElement = createSubNoteElement(noteData, groupData.id, type);
+                           listContainer.appendChild(noteElement);
+                        } else {
+                            console.warn(`Skipping invalid note data in ${type} for process ${groupData.id}:`, noteData);
+                        }
+                    });
+                }
+
+                if (addButton) {
+                    addButton.onclick = () => addSubNote(groupData.id, type);
+                }
+            });
+
+            processGroupsContainer.appendChild(groupElement);
+        }
+
+        /**
+         * Adds a new, empty process group to the state and renders it.
+         */
+        function addNewProcessGroup() {
+            const newGroupData = {
+                id: generateId('process'),
+                processContent: '',
+                suppliers: [],
+                inputs: [],
+                outputs: [],
+                customers: []
+            };
+            processGroups.push(newGroupData);
+            renderProcessGroup(newGroupData);
+            saveState();
+
+            const newGroupElement = document.getElementById(newGroupData.id);
+            if (newGroupElement) {
+                newGroupElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                const processTextarea = newGroupElement.querySelector('.process-content');
+                if(processTextarea) {
+                    setTimeout(() => requestAnimationFrame(() => processTextarea.focus()), 300);
+                }
+            }
+        }
+
+        /**
+         * Renders the entire board based on the current processGroups array.
+         */
+        function renderBoard() {
+            processGroupsContainer.innerHTML = ''; // Clear the board
+            processGroups.forEach(groupData => {
+                // Ensure all sub-arrays exist before rendering
+                groupData.suppliers = groupData.suppliers || [];
+                groupData.inputs = groupData.inputs || [];
+                groupData.outputs = groupData.outputs || [];
+                groupData.customers = groupData.customers || [];
+                renderProcessGroup(groupData);
+            });
+        }
+
+
+        /**
+         * Loads process groups from localStorage and renders them.
+         */
+        function loadState() {
+            const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+            let loadedGroups = [];
+            if (savedState) {
+                try {
+                    loadedGroups = JSON.parse(savedState);
+                    if (!Array.isArray(loadedGroups)) {
+                        console.error("Loaded state is not an array, resetting.");
+                        loadedGroups = [];
+                    }
+                } catch (error) {
+                    console.error("Error parsing saved state:", error);
+                    loadedGroups = [];
+                    localStorage.removeItem(LOCAL_STORAGE_KEY);
+                }
+            }
+
+            processGroups = loadedGroups.filter(group => group && group.id);
+            renderBoard(); // Use renderBoard to display loaded state
+            // Initial save after loading and potentially cleaning data
+            saveState();
+        }
+
+        // --- CSV Export/Import Functionality ---
+
+        /**
+         * Escapes a string for CSV format.
+         * @param {string} str - The string to escape.
+         * @returns {string} The escaped string.
+         */
+        function escapeCsvValue(str) {
+            if (str === null || str === undefined) {
+                return '';
+            }
+            const stringValue = String(str);
+            if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+                return `"${stringValue.replace(/"/g, '""')}"`;
+            }
+            return stringValue;
+        }
+
+        /**
+         * Aggregates content from an array of notes into a single string,
+         * separated by newlines within the CSV cell.
+         * @param {Array<object>} items - Array of note objects.
+         * @returns {string} - A single string with items separated by newline characters.
+         */
+        function aggregateItemsForCsv(items) {
+            if (!Array.isArray(items) || items.length === 0) {
+                return '';
+            }
+            return items.map(item => item.content || '').join('\n');
+        }
+
+        /**
+         * Gathers data and triggers CSV download with one row per process group.
+         */
+        function exportToCsv() {
+            if (processGroups.length === 0) {
+                alert("Board is empty. Add some process groups first.");
+                return;
+            }
+
+            const headers = ["Suppliers", "Inputs", "Process", "Outputs", "Customers"];
+            const rows = [headers.join(',')];
+
+            processGroups.forEach(group => {
+                const suppliersContent = aggregateItemsForCsv(group.suppliers);
+                const inputsContent = aggregateItemsForCsv(group.inputs);
+                const processContent = group.processContent || '';
+                const outputsContent = aggregateItemsForCsv(group.outputs);
+                const customersContent = aggregateItemsForCsv(group.customers);
+
+                rows.push([
+                    escapeCsvValue(suppliersContent),
+                    escapeCsvValue(inputsContent),
+                    escapeCsvValue(processContent),
+                    escapeCsvValue(outputsContent),
+                    escapeCsvValue(customersContent)
+                ].join(','));
+            });
+
+            const csvContent = rows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            link.setAttribute("download", `sipoc_board_status_${timestamp}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        /**
+         * Parses a potentially quoted CSV field, handling escaped quotes and newlines.
+         * @param {string} fieldString - The string segment potentially containing a quoted field.
+         * @param {number} startIndex - The index where the field starts (should be a quote).
+         * @returns {{value: string, nextIndex: number}} - The parsed value and the index *after* the closing quote.
+         */
+         function parseQuotedField(fieldString, startIndex) {
+            let value = '';
+            let currentIndex = startIndex + 1; // Skip the opening quote
+            while (currentIndex < fieldString.length) {
+                if (fieldString[currentIndex] === '"') {
+                    // Check if it's an escaped quote ("")
+                    if (currentIndex + 1 < fieldString.length && fieldString[currentIndex + 1] === '"') {
+                        value += '"'; // Add a single quote to the value
+                        currentIndex += 2; // Skip both quotes
+                    } else {
+                        // It's the closing quote for the field
+                        return { value: value, nextIndex: currentIndex + 1 };
+                    }
+                } else {
+                    value += fieldString[currentIndex]; // Add other characters including newlines
+                    currentIndex++;
+                }
+            }
+            console.warn("Malformed CSV: Unterminated quoted field starting at index", startIndex);
+            return { value: value, nextIndex: currentIndex }; // Return current index if unterminated
+        }
+
+        /**
+         * Parses a single row of CSV data, attempting to handle quoted fields and commas correctly.
+         * @param {string} rowString - The string for a single CSV row.
+         * @returns {Array<string>} - An array of field values.
+         */
+        function parseCsvRow(rowString) {
+            const fields = [];
+            let currentIndex = 0;
+            while (currentIndex < rowString.length) {
+                let char = rowString[currentIndex];
+
+                if (char === '"') {
+                    // Start of a quoted field
+                    const parsed = parseQuotedField(rowString, currentIndex);
+                    fields.push(parsed.value); // Push the parsed value (includes internal newlines)
+                    currentIndex = parsed.nextIndex; // Update index to after the closing quote
+
+                    // Skip the comma *after* the quoted field if it exists
+                    if (currentIndex < rowString.length && rowString[currentIndex] === ',') {
+                        currentIndex++;
+                    }
+                } else {
+                    // Start of an unquoted field
+                    let nextCommaIndex = rowString.indexOf(',', currentIndex);
+                    if (nextCommaIndex === -1) {
+                        // Last field in the row
+                        fields.push(rowString.substring(currentIndex));
+                        currentIndex = rowString.length;
+                    } else {
+                        fields.push(rowString.substring(currentIndex, nextCommaIndex));
+                        currentIndex = nextCommaIndex + 1; // Move past the comma
+                    }
+                }
+            }
+             // Handle case where row ends with a comma (empty last field)
+             if (rowString.endsWith(',')) {
+                 fields.push('');
+             }
+            return fields;
+        }
+
+
+        /**
+         * Takes aggregated content (with newlines) and splits it into note objects.
+         * @param {string} aggregatedContent - The content string from a CSV cell.
+         * @returns {Array<object>} - An array of note objects {id, content}.
+         */
+        function splitAggregatedContent(aggregatedContent) {
+            if (!aggregatedContent) {
+                return [];
+            }
+            // Split by newline, filter out empty strings that might result from trailing newlines
+            return aggregatedContent.split('\n')
+                                  .filter(content => content.trim() !== '') // Filter empty lines
+                                  .map(content => ({
+                                        id: generateId('note'), // Generate new ID for imported notes
+                                        content: content
+                                    }));
+        }
+
+        /**
+         * Handles the file input change event for CSV import.
+         * @param {Event} event - The file input change event.
+         */
+        function handleCsvImport(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                return; // No file selected
+            }
+
+            if (!confirm("Importing will replace the current board content. Are you sure?")) {
+                 csvFileInput.value = ''; // Reset file input
+                 return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const csvContent = e.target.result;
+                const newProcessGroups = [];
+
+                try {
+                    // --- Robust Row Splitting (Handles quoted newlines) ---
+                    const logicalRows = [];
+                    let currentRow = '';
+                    let inQuotes = false;
+                    // Normalize line endings first
+                    const normalizedContent = csvContent.replace(/\r\n|\r/g, '\n');
+
+                    for (let i = 0; i < normalizedContent.length; i++) {
+                        const char = normalizedContent[i];
+                        currentRow += char; // Append character to current row buffer
+
+                        if (char === '"') {
+                            // Check for escaped quote ("")
+                            if (i + 1 < normalizedContent.length && normalizedContent[i + 1] === '"') {
+                                currentRow += '"'; // Add the second quote immediately
+                                i++; // Skip the next quote
+                            } else {
+                                inQuotes = !inQuotes; // Toggle quote state
+                            }
+                        }
+
+                        // If we hit a newline AND we are not inside quotes, it's the end of a logical row
+                        if (char === '\n' && !inQuotes) {
+                            logicalRows.push(currentRow.trim()); // Add the completed row
+                            currentRow = ''; // Reset buffer
+                        }
+                    }
+                    // Add the last row if it wasn't ended by a newline or was empty
+                    if (currentRow.trim() || normalizedContent.endsWith('\n')) {
+                         if (currentRow.trim()) { // Only push if non-empty
+                           logicalRows.push(currentRow.trim());
+                         }
+                    }
+                    // --- End of Robust Row Splitting ---
+
+
+                    // Check if there's at least a header and one data row
+                    if (logicalRows.length < 1) { // Can import just headers, or headers+data
+                        throw new Error("CSV file appears to be empty.");
+                    }
+
+                    // Basic header check (optional but recommended)
+                    const headerRow = parseCsvRow(logicalRows[0]); // Use parseCsvRow on the first logical row
+                    const expectedHeaders = ["Suppliers", "Inputs", "Process", "Outputs", "Customers"];
+                    if (headerRow.length !== expectedHeaders.length || !headerRow.every((h, i) => h.trim() === expectedHeaders[i])) {
+                         console.warn("CSV headers don't match expected format (Suppliers, Inputs, Process, Outputs, Customers):", headerRow);
+                         // Allow import anyway, but warn user
+                         alert("Warning: CSV headers don't match the expected format. Import might be incorrect.");
+                    }
+
+
+                    // Start processing data rows from the second logical row (index 1)
+                    for (let i = 1; i < logicalRows.length; i++) {
+                        const rowString = logicalRows[i]; // Already trimmed by row splitter
+                        if (!rowString) continue; // Skip empty logical lines
+
+                        const fields = parseCsvRow(rowString); // Use the refined parser
+                        if (fields.length !== 5) {
+                             console.warn(`Skipping row ${i + 1}: Expected 5 fields, found ${fields.length}. Row content: ${rowString}`);
+                             continue; // Skip rows with incorrect number of fields
+                        }
+
+                        const [suppliersStr, inputsStr, processStr, outputsStr, customersStr] = fields;
+
+                        newProcessGroups.push({
+                            id: generateId('process'), // Generate new ID for the process group
+                            processContent: processStr,
+                            suppliers: splitAggregatedContent(suppliersStr),
+                            inputs: splitAggregatedContent(inputsStr),
+                            outputs: splitAggregatedContent(outputsStr),
+                            customers: splitAggregatedContent(customersStr)
+                        });
+                    }
+
+                    // Replace current state and re-render
+                    processGroups = newProcessGroups;
+                    renderBoard(); // Re-render the entire board
+                    saveState(); // Save the newly imported state
+                    alert(`CSV file imported successfully! ${newProcessGroups.length} process group(s) loaded.`);
+
+                } catch (error) {
+                    console.error("Error processing CSV file:", error);
+                    alert(`Error importing CSV: ${error.message}`);
+                } finally {
+                     // Reset the file input so the change event fires again if the same file is selected
+                     csvFileInput.value = '';
+                }
+            };
+
+            reader.onerror = function(e) {
+                 console.error("Error reading file:", e);
+                 alert("Error reading the selected file.");
+                 csvFileInput.value = ''; // Reset file input
+            };
+
+            reader.readAsText(file); // Read the file as text
+        }
+
+
+        // --- Event Listeners ---
+        addProcessGroupButton.addEventListener('click', addNewProcessGroup);
+        saveCsvButton.addEventListener('click', exportToCsv);
+        // Trigger hidden file input when Import button is clicked
+        importCsvButton.addEventListener('click', () => {
+            csvFileInput.click();
+        });
+        // Handle file selection
+        csvFileInput.addEventListener('change', handleCsvImport);
+
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', loadState);
+
+    </script>
+</body>
+</html>
