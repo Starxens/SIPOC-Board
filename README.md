@@ -2,6 +2,8 @@
 
 A simple, web-based tool for creating and managing SIPOC (Suppliers, Inputs, Process, Outputs, Customers) diagrams for workshop sessions or process analysis. Built using HTML, CSS (Tailwind CSS), and vanilla JavaScript.
 
+Try it out at https://starxens.github.io/SIPOC-Board/
+
 ## Features
 
 * **Process-Centric View:** Each process step has its own dedicated row with columns for Suppliers, Inputs, Outputs, and Customers.
